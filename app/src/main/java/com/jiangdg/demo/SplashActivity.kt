@@ -19,6 +19,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 
@@ -32,15 +33,17 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         setContentView(R.layout.activity_splash)
-        startMainActivity()
+        findViewById<View>(R.id.tvOption).setOnClickListener {
+            LoadingHelper.startTime = System.currentTimeMillis()
+            LoadingHelper.showLoading(this@SplashActivity)
+            Intent(this@SplashActivity, MainActivity::class.java).apply {
+                startActivity(this)
+            }
+        }
     }
 
-    private fun startMainActivity() {
-        Handler(Looper.getMainLooper()).postDelayed({
-            Intent(this, MainActivity::class.java).apply {
-                startActivity(this)
-                finish()
-            }
-        }, 800)
+    override fun onResume() {
+        super.onResume()
+        LoadingHelper.hideLoading()
     }
 }

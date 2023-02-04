@@ -16,7 +16,12 @@
 package com.jiangdg.ausbc.base
 
 import android.graphics.SurfaceTexture
-import android.view.*
+import android.os.Handler
+import android.os.Looper
+import android.view.Gravity
+import android.view.SurfaceHolder
+import android.view.TextureView
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
@@ -29,12 +34,11 @@ import com.jiangdg.ausbc.camera.CameraUvcStrategy
 import com.jiangdg.ausbc.camera.ICameraStrategy
 import com.jiangdg.ausbc.camera.bean.CameraRequest
 import com.jiangdg.ausbc.camera.bean.PreviewSize
-import com.jiangdg.ausbc.render.env.RotateType
 import com.jiangdg.ausbc.render.effect.AbstractEffect
+import com.jiangdg.ausbc.render.env.RotateType
 import com.jiangdg.ausbc.widget.AspectRatioSurfaceView
 import com.jiangdg.ausbc.widget.AspectRatioTextureView
 import com.jiangdg.ausbc.widget.IAspectRatio
-import java.lang.IllegalArgumentException
 
 /** Extends from BaseFragment for CameraClient usage
  *
@@ -44,25 +48,42 @@ abstract class CameraFragment : BaseFragment() {
     private var mCameraClient: CameraClient? = null
 
     override fun initData() {
-        mCameraClient = getCameraClient() ?: getDefault()
-        when (val cameraView = getCameraView()) {
-            is AspectRatioTextureView -> {
-                handleTextureView(cameraView)
-                cameraView
+        Thread({
+            mCameraClient = getCameraClient() ?: getDefault()
+            onCameraClientInit()
+            Handler(Looper.getMainLooper()).post {
+                when (val cameraView = getCameraView()) {
+                    is AspectRatioTextureView -> {
+                        handleTextureView(cameraView)
+                        cameraView
+                    }
+                    is AspectRatioSurfaceView -> {
+                        handleSurfaceView(cameraView)
+                        cameraView
+                    }
+                    else -> {
+                        null
+                    }
+                }?.let { view ->
+                    getCameraViewContainer()?.apply {
+                        removeAllViews()
+                        addView(view, getViewLayoutParams(this))
+                    }
+                }
             }
-            is AspectRatioSurfaceView -> {
-                handleSurfaceView(cameraView)
-                cameraView
-            }
-            else -> {
-                null
-            }
-        }?.let { view->
-            getCameraViewContainer()?.apply {
-                removeAllViews()
-                addView(view, getViewLayoutParams(this))
-            }
-        }
+        }, "USBCamera").start()
+    }
+
+    open fun onCameraClientInit() {
+
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        mCameraClient?.captureVideoStop()
+        mCameraClient?.closeCamera()
+        mCameraClient?.getCameraStrategy()?.stopPreview()
+        mCameraClient?.getCameraStrategy()?.unRegister()
     }
 
     private fun handleTextureView(textureView: AspectRatioTextureView) {
@@ -138,7 +159,7 @@ abstract class CameraFragment : BaseFragment() {
      *
      * @return camera open status
      */
-    protected fun isCameraOpened() = mCameraClient?.isCameraOpened()  ?: false
+    protected fun isCameraOpened() = mCameraClient?.isCameraOpened() ?: false
 
     /**
      * Update resolution
@@ -156,7 +177,8 @@ abstract class CameraFragment : BaseFragment() {
      * @param aspectRatio preview size aspect ratio,
      *                      null means getting all preview sizes
      */
-    protected fun getAllPreviewSizes(aspectRatio: Double? = null) = mCameraClient?.getAllPreviewSizes(aspectRatio)
+    protected fun getAllPreviewSizes(aspectRatio: Double? = null) =
+        mCameraClient?.getAllPreviewSizes(aspectRatio)
 
     /**
      * Add render effect
@@ -234,7 +256,11 @@ abstract class CameraFragment : BaseFragment() {
      * @param path custom save path
      * @param durationInSec divided record duration time in seconds
      */
-    protected fun captureVideoStart(callBack: ICaptureCallBack, path: String ?= null, durationInSec: Long = 0L) {
+    protected fun captureVideoStart(
+        callBack: ICaptureCallBack,
+        path: String? = null,
+        durationInSec: Long = 0L
+    ) {
         mCameraClient?.captureVideoStart(callBack, path, durationInSec)
     }
 
@@ -251,7 +277,7 @@ abstract class CameraFragment : BaseFragment() {
      * @param callBack capture status, see [ICaptureCallBack]
      * @param path custom save path
      */
-    protected fun captureAudioStart(callBack: ICaptureCallBack, path: String ?= null) {
+    protected fun captureAudioStart(callBack: ICaptureCallBack, path: String? = null) {
         mCameraClient?.captureAudioStart(callBack, path)
     }
 
@@ -336,7 +362,7 @@ abstract class CameraFragment : BaseFragment() {
     }
 
     private fun getViewLayoutParams(viewGroup: ViewGroup): ViewGroup.LayoutParams {
-        return when(viewGroup) {
+        return when (viewGroup) {
             is FrameLayout -> {
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -356,8 +382,8 @@ abstract class CameraFragment : BaseFragment() {
                 RelativeLayout.LayoutParams(
                     RelativeLayout.LayoutParams.MATCH_PARENT,
                     RelativeLayout.LayoutParams.MATCH_PARENT
-                ).apply{
-                    when(getGravity()) {
+                ).apply {
+                    when (getGravity()) {
                         Gravity.TOP -> {
                             addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE)
                         }
@@ -371,8 +397,10 @@ abstract class CameraFragment : BaseFragment() {
                     }
                 }
             }
-            else -> throw IllegalArgumentException("Unsupported container view, " +
-                    "you can use FrameLayout or LinearLayout or RelativeLayout")
+            else -> throw IllegalArgumentException(
+                "Unsupported container view, " +
+                        "you can use FrameLayout or LinearLayout or RelativeLayout"
+            )
         }
     }
 
@@ -418,8 +446,8 @@ abstract class CameraFragment : BaseFragment() {
     private fun getCameraRequest(): CameraRequest {
         return CameraRequest.Builder()
             .setFrontCamera(false)
-            .setPreviewWidth(640)
-            .setPreviewHeight(480)
+            .setPreviewWidth(1920)
+            .setPreviewHeight(1080)
             .create()
     }
 }

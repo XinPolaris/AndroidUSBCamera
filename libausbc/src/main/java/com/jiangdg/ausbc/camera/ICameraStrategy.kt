@@ -77,7 +77,7 @@ abstract class ICameraStrategy(context: Context) : Handler.Callback {
 
     init {
         this.mContext = context.applicationContext
-        addLifecycleObserver(context)
+//        addLifecycleObserver(context)
     }
 
     override fun handleMessage(msg: Message): Boolean {

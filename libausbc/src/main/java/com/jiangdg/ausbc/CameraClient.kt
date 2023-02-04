@@ -83,28 +83,30 @@ class CameraClient internal constructor(builder: Builder) : IPreviewDataCallBack
             if (context !is LifecycleOwner) {
                 throw IllegalArgumentException("context should be subclass of LifecycleOwner!")
             }
-            addLifecycleObserver(context)
+//            addLifecycleObserver(context)
             // listener camera status
-            EventBus.with<CameraStatus>(BusKey.KEY_CAMERA_STATUS).observe(context, { status ->
-                when(status.code) {
-                    CameraStatus.ERROR -> {
-                        mCamera?.stopPreview()
-                    }
-                    CameraStatus.ERROR_PREVIEW_SIZE -> {
-                        mRequest?.let { request ->
-                            val oldPreviewWidth = request.previewWidth
-                            val oldPreviewHeight = request.previewHeight
-                            getSuitableSize(oldPreviewWidth, oldPreviewHeight).let {
-                                it ?: return@observe
-                            }.also {
-                                Logger.i(TAG, "Automatically select the appropriate resolution (${it.width}x${it.height})")
-                                updateResolution(it.width, it.height)
+            Handler(Looper.getMainLooper()).post {
+                EventBus.with<CameraStatus>(BusKey.KEY_CAMERA_STATUS).observe(context, { status ->
+                    when(status.code) {
+                        CameraStatus.ERROR -> {
+                            mCamera?.stopPreview()
+                        }
+                        CameraStatus.ERROR_PREVIEW_SIZE -> {
+                            mRequest?.let { request ->
+                                val oldPreviewWidth = request.previewWidth
+                                val oldPreviewHeight = request.previewHeight
+                                getSuitableSize(oldPreviewWidth, oldPreviewHeight).let {
+                                    it ?: return@observe
+                                }.also {
+                                    Logger.i(TAG, "Automatically select the appropriate resolution (${it.width}x${it.height})")
+                                    updateResolution(it.width, it.height)
+                                }
                             }
                         }
+                        else -> { }
                     }
-                    else -> { }
-                }
-            })
+                })
+            }
         }
         if (Utils.debugCamera) {
             Logger.i(TAG, "init camera client, camera = $mCamera")

@@ -18,6 +18,7 @@ package com.jiangdg.demo
 import android.Manifest.permission.*
 import android.os.Bundle
 import android.os.PowerManager
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.PermissionChecker
@@ -45,6 +46,13 @@ class MainActivity : AppCompatActivity() {
 //        replaceDemoFragment(DemoMultiCameraFragment())
         replaceDemoFragment(DemoFragment())
 //        replaceDemoFragment(GlSurfaceFragment())
+
+        viewBinding.tvOption.setOnClickListener {
+            finish()
+        }
+        viewBinding.root.post {
+            Log.d("TAG", "消耗时间： ${System.currentTimeMillis() - LoadingHelper.startTime}")
+        }
     }
 
     override fun onStart() {
@@ -112,7 +120,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        immersionBar= null
+        immersionBar = null
     }
 
     private fun setStatusBar() {
