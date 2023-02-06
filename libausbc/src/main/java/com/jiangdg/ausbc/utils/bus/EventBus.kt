@@ -44,6 +44,10 @@ object EventBus {
         return liveData
     }
 
+    fun removeEventbus(busName: String) {
+        mLiveDataMap.remove(busName)
+    }
+
     /** Customize LiveData
      *
      * By managing the version of LiveData by yourself, it is convenient for subsequent
@@ -73,7 +77,7 @@ object EventBus {
             postValue(message)
         }
 
-        override fun observe(owner: LifecycleOwner, observer: Observer<in T>) {
+        fun observe2(owner: LifecycleOwner, observer: Observer<in T>):ProxyObserver<T> {
             // Listen for the destruction event of the host, and check whether there are other observers in LiveData
             // If the LiveData is not removed actively
             owner.lifecycle.addObserver(object : LifecycleEventObserver {
@@ -87,7 +91,9 @@ object EventBus {
             })
             // Repackage the observer
             // use a proxy observer, which will only dispatch the latest events to the observer
-            super.observe(owner, ProxyObserver(this, observer))
+            val proxyObserver = ProxyObserver(this, observer)
+            super.observe(owner, proxyObserver)
+            return proxyObserver
         }
     }
 
@@ -95,7 +101,7 @@ object EventBus {
      *
      * Control whether to distribute events by managing the version field of the Observer yourself
      */
-    internal class ProxyObserver<T>(
+    class ProxyObserver<T>(
         private val liveData: BusLiveData<T>,
         private val observer: Observer<in T>
     ): Observer<T> {

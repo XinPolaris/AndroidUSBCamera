@@ -24,6 +24,7 @@ import androidx.annotation.MainThread
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import com.jiangdg.ausbc.callback.ICaptureCallBack
 import com.jiangdg.ausbc.callback.IEncodeDataCallBack
 import com.jiangdg.ausbc.callback.IPlayCallBack
@@ -72,7 +73,7 @@ class CameraClient internal constructor(builder: Builder) : IPreviewDataCallBack
     private var mVideoProcess: AbstractProcessor? = null
     private var mMediaMuxer: Mp4Muxer? = null
     private val mMainHandler: Handler = Handler(Looper.getMainLooper())
-
+    private var proxyObserver: Observer<CameraStatus>? = null
     private val mRenderManager: RenderManager? by lazy {
         RenderManager(mCtx!!, mRequest!!.previewWidth, mRequest!!.previewHeight)
     }
@@ -86,7 +87,7 @@ class CameraClient internal constructor(builder: Builder) : IPreviewDataCallBack
 //            addLifecycleObserver(context)
             // listener camera status
             Handler(Looper.getMainLooper()).post {
-                EventBus.with<CameraStatus>(BusKey.KEY_CAMERA_STATUS).observe(context, { status ->
+                proxyObserver = EventBus.with<CameraStatus>(BusKey.KEY_CAMERA_STATUS).observe2(context, { status ->
                     when(status.code) {
                         CameraStatus.ERROR -> {
                             mCamera?.stopPreview()
@@ -96,7 +97,7 @@ class CameraClient internal constructor(builder: Builder) : IPreviewDataCallBack
                                 val oldPreviewWidth = request.previewWidth
                                 val oldPreviewHeight = request.previewHeight
                                 getSuitableSize(oldPreviewWidth, oldPreviewHeight).let {
-                                    it ?: return@observe
+                                    it ?: return@observe2
                                 }.also {
                                     Logger.i(TAG, "Automatically select the appropriate resolution (${it.width}x${it.height})")
                                     updateResolution(it.width, it.height)
@@ -745,6 +746,22 @@ class CameraClient internal constructor(builder: Builder) : IPreviewDataCallBack
          * @return [CameraClient.Builder]
          */
         fun build() = CameraClient(this)
+    }
+
+    /**
+     * 销毁
+     */
+    fun destroy() {
+        Handler(Looper.getMainLooper()).post {
+            proxyObserver?.let {
+                EventBus.with<CameraStatus>(BusKey.KEY_CAMERA_STATUS).removeObserver(it)
+            }
+            EventBus.removeEventbus(BusKey.KEY_CAMERA_STATUS)
+        }
+        captureVideoStop()
+        closeCamera()
+        getCameraStrategy()?.stopPreview()
+        getCameraStrategy()?.unRegister()
     }
 }
 
