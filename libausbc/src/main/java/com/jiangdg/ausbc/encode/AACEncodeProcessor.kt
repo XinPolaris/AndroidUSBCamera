@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2022 Jiangdg
+ * Copyright 2017-2023 Jiangdg
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,18 @@ package com.jiangdg.ausbc.encode
 import android.media.*
 import android.os.Process
 import com.jiangdg.ausbc.callback.ICaptureCallBack
+import com.jiangdg.ausbc.callback.IEncodeDataCallBack
 import com.jiangdg.ausbc.callback.IPlayCallBack
-import com.jiangdg.ausbc.encode.audio.AudioSystem
-import com.jiangdg.ausbc.encode.audio.AudioUac
-import com.jiangdg.ausbc.encode.audio.IAudio
+import com.jiangdg.ausbc.encode.audio.AudioStrategySystem
+import com.jiangdg.ausbc.encode.audio.IAudioStrategy
 import com.jiangdg.ausbc.encode.bean.RawData
 import com.jiangdg.ausbc.utils.Logger
 import com.jiangdg.ausbc.utils.MediaUtils
 import com.jiangdg.ausbc.utils.Utils
 import com.jiangdg.natives.LameMp3
-import com.jiangdg.usb.USBMonitor
 import java.io.File
 import java.io.FileOutputStream
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.Exception
 
@@ -40,9 +37,10 @@ import kotlin.Exception
  *
  * @author Created by jiangdg on 2022/2/10
  */
-class AACEncodeProcessor(ctrlBlock: USBMonitor.UsbControlBlock? = null) : AbstractProcessor() {
+class AACEncodeProcessor(strategy: IAudioStrategy? = null) : AbstractProcessor() {
     private var mAudioTrack: AudioTrack? = null
     private var mPresentationTimeUs: Long = 0L
+    private var mCountDownLatch: CountDownLatch? = null
     private val mPlayQueue: ConcurrentLinkedQueue<RawData> by lazy {
         ConcurrentLinkedQueue()
     }
@@ -61,11 +59,9 @@ class AACEncodeProcessor(ctrlBlock: USBMonitor.UsbControlBlock? = null) : Abstra
     private val mRecordMp3State: AtomicBoolean by lazy {
         AtomicBoolean(false)
     }
-    private var mAudioRecord: IAudio = if (ctrlBlock != null) {
-        AudioUac(ctrlBlock)
-    } else {
-        AudioSystem()
-    }
+    private var mAudioRecord: IAudioStrategy = strategy ?: AudioStrategySystem()
+
+    private var mSamplingRateIndex: Int = -1
 
     override fun getThreadName(): String = TAG
 
@@ -121,8 +117,28 @@ class AACEncodeProcessor(ctrlBlock: USBMonitor.UsbControlBlock? = null) : Abstra
         //Divided by 8: The original unit of pcm is bit, 1 byte = 8 bit, 1 short = 16 bit, and it needs to be converted if it is carried by Byte[] and Short[]
         val sampleRate = mAudioRecord.getSampleRate()
         val channelCount = mAudioRecord.getChannelCount()
-        mPresentationTimeUs += (1.0 * bufferSize / (sampleRate * channelCount * (AUDIO_FORMAT_BITS / 8)) * 1000000.0).toLong()
+        val format = mAudioRecord.getAudioFormat()
+        val formatBit = if (format == AudioFormat.ENCODING_PCM_16BIT) {
+            18
+        } else {
+            8
+        }
+        mPresentationTimeUs += (1.0 * bufferSize / (sampleRate * channelCount * (formatBit / 8)) * 1000000.0).toLong()
         return mPresentationTimeUs
+    }
+
+    override fun processOutputData(
+        bufferInfo: MediaCodec.BufferInfo,
+        encodeData: ByteArray
+    ): Pair<IEncodeDataCallBack.DataType, ByteArray> {
+        val iFrameData = ByteArray(bufferInfo.size + ADTS_LEN)
+        addADTStoPacket(iFrameData, iFrameData.size)
+        System.arraycopy(encodeData, 0, iFrameData, ADTS_LEN, bufferInfo.size)
+        return Pair(IEncodeDataCallBack.DataType.AAC, iFrameData)
+    }
+
+    override fun processInputData(data: ByteArray): ByteArray? {
+        return data
     }
 
     /**
@@ -133,7 +149,12 @@ class AACEncodeProcessor(ctrlBlock: USBMonitor.UsbControlBlock? = null) : Abstra
     fun playAudioStart(callBack: IPlayCallBack?) {
         mAudioThreadPool.submit {
             try {
+                mCountDownLatch = CountDownLatch(1)
                 initAudioRecord()
+                if (mCountDownLatch?.await(3, TimeUnit.SECONDS) == false) {
+                    callBack?.onError("times out, init audio failed")
+                    return@submit
+                }
                 initAudioTrack()
                 mMainHandler.post {
                     callBack?.onBegin()
@@ -191,27 +212,33 @@ class AACEncodeProcessor(ctrlBlock: USBMonitor.UsbControlBlock? = null) : Abstra
                     }
                     return@submit
                 }
+                mCountDownLatch = CountDownLatch(1)
                 initAudioRecord()
+                if (mCountDownLatch?.await(3, TimeUnit.SECONDS) == false) {
+                    callBack.onError("times out, init audio failed")
+                    return@submit
+                }
                 val file = File(audioPath)
                 if (file.exists()) {
                     file.delete()
                 }
                 fos = FileOutputStream(file)
-                val mp3Buf = ByteArray(1024)
+                val mp3Buf = ByteArray(2048)
                 val sampleRate = mAudioRecord.getSampleRate()
                 val channelCount = mAudioRecord.getChannelCount()
+                if (Utils.debugCamera) {
+                    Logger.i(TAG, "start record mp3 success, $sampleRate, $channelCount, $audioPath")
+                }
                 LameMp3.lameInit(sampleRate, channelCount, sampleRate, BIT_RATE, DEGREE_RECORD_MP3)
                 mMainHandler.post {
                     callBack.onBegin()
-                }
-                if (Utils.debugCamera) {
-                    Logger.i(TAG, "start record mp3 success, path = $audioPath")
                 }
                 mRecordMp3State.set(true)
                 while (mRecordMp3State.get()) {
                     mRecordMp3Queue.poll()?.apply {
                         val tmpData = MediaUtils.transferByte2Short(data, size)
                         val encodeSize = LameMp3.lameEncode(tmpData, null, tmpData.size, mp3Buf)
+                        Logger.i(TAG, "encode, $size, $encodeSize")
                         if (encodeSize > 0) {
                             fos?.write(mp3Buf, 0, encodeSize)
                         }
@@ -261,14 +288,12 @@ class AACEncodeProcessor(ctrlBlock: USBMonitor.UsbControlBlock? = null) : Abstra
             mAudioRecord.initAudioRecord()
             mAudioRecord.startRecording()
             mAudioRecordState.set(true)
+            mCountDownLatch?.countDown()
             while (mAudioRecordState.get()) {
                 val data = mAudioRecord.read()
                 data ?: continue
                 // pcm encode queue
-                if (mRawDataQueue.size >= MAX_QUEUE_SIZE) {
-                    mRawDataQueue.poll()
-                }
-                mRawDataQueue.offer(data)
+                putRawData(data)
                 // pcm play queue
                 if (mPlayQueue.size >= MAX_QUEUE_SIZE) {
                     mPlayQueue.poll()
@@ -291,6 +316,7 @@ class AACEncodeProcessor(ctrlBlock: USBMonitor.UsbControlBlock? = null) : Abstra
 
     private fun releaseAudioRecord() {
         if (mEncodeState.get() || mAudioPlayState.get() || mRecordMp3State.get()) {
+            Logger.w(TAG, "audio is using, cancel release")
             return
         }
         mAudioRecordState.set(false)
@@ -302,19 +328,21 @@ class AACEncodeProcessor(ctrlBlock: USBMonitor.UsbControlBlock? = null) : Abstra
             return
         }
         val sampleRate = mAudioRecord.getSampleRate()
-        val rateResolution = mAudioRecord.getAudioFormat()
-        Logger.i(TAG, "initAudioTrack: sampleRate = $sampleRate, mRateResolution = $rateResolution")
+        val audioFormat = mAudioRecord.getAudioFormat()
+        val channelCount = mAudioRecord.getChannelCount()
+        val channelConfig = mAudioRecord.getChannelConfig()
+        Logger.i(TAG, "initAudioTrack: sample=$sampleRate,format=$audioFormat,count=$channelCount")
         Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_AUDIO)
         val minBufferSize = AudioTrack.getMinBufferSize(
             sampleRate,
-            CHANNEL_OUT_CONFIG,
-            rateResolution
+            channelConfig,
+            audioFormat
         )
         mAudioTrack = AudioTrack(
             AudioManager.STREAM_MUSIC,
             sampleRate,
-            CHANNEL_OUT_CONFIG,
-            rateResolution,
+            channelConfig,
+            audioFormat,
             minBufferSize,
             AUDIO_TRACK_MODE
         )
@@ -330,15 +358,46 @@ class AACEncodeProcessor(ctrlBlock: USBMonitor.UsbControlBlock? = null) : Abstra
         }
     }
 
+    private fun addADTStoPacket(packet: ByteArray, packetLen: Int) {
+        packet[0] = 0xFF.toByte()
+        packet[1] = 0xF1.toByte()
+        packet[2] = (((2 - 1 shl 6) + (mSamplingRateIndex shl 2) + (1 shr 2)).toByte())
+        packet[3] = ((1 and 3 shl 6) + (packetLen shr 11)).toByte()
+        packet[4] = (packetLen and 0x7FF shr 3).toByte()
+        packet[5] = ((packetLen and 7 shl 5) + 0x1F).toByte()
+        packet[6] = 0xFC.toByte()
+    }
+
     companion object {
         private const val TAG = "AACEncodeProcessor"
         private const val MIME_TYPE = "audio/mp4a-latm"
         private const val BIT_RATE = 16000
-        private const val MAX_INPUT_SIZE = 8192
+        private const val MAX_INPUT_SIZE = 48000
         private const val CHANNEL_OUT_CONFIG = AudioFormat.CHANNEL_OUT_MONO
         private const val AUDIO_TRACK_MODE = AudioTrack.MODE_STREAM
         private const val CODEC_AAC_PROFILE = MediaCodecInfo.CodecProfileLevel.AACObjectLC
-        private const val AUDIO_FORMAT_BITS = 16
         private const val DEGREE_RECORD_MP3 = 7
+
+        private const val ADTS_LEN = 7
+        private const val AAC_FRAME = 0
+
+        private val AUDIO_SAMPLING_RATES = intArrayOf(
+            96000,  // 0
+            88200,  // 1
+            64000,  // 2
+            48000,  // 3
+            44100,  // 4
+            32000,  // 5
+            24000,  // 6
+            22050,  // 7
+            16000,  // 8
+            12000,  // 9
+            11025,  // 10
+            8000,  // 11
+            7350,  // 12
+            -1,  // 13
+            -1,  // 14
+            -1
+        )
     }
 }
