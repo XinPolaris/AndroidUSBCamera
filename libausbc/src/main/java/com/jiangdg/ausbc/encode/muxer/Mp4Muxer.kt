@@ -79,6 +79,7 @@ class Mp4Muxer(
         this.mCaptureCallBack = callBack
         this.mContext= context
         try {
+            File(mCameraDir).mkdirs()
             if (path.isNullOrEmpty()) {
                 val date = mDateFormat.format(System.currentTimeMillis())
                 path = "$mCameraDir/VID_JJCamera_$date"

@@ -83,7 +83,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
         unRegisterMultiCamera()
     }
 
-    protected fun registerMultiCamera() {
+    fun registerMultiCamera() {
         mCameraClient = MultiCameraClient(requireContext(), object : IDeviceConnectCallBack {
             override fun onAttachDev(device: UsbDevice?) {
                 device ?: return
@@ -161,7 +161,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
         mCameraClient?.register()
     }
 
-    protected fun unRegisterMultiCamera() {
+    fun unRegisterMultiCamera() {
         mCameraMap.values.forEach {
             it.closeCamera()
         }
@@ -171,7 +171,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
         mCameraClient = null
     }
 
-    protected fun getDeviceList() = mCameraClient?.getDeviceList()
+    fun getDeviceList() = mCameraClient?.getDeviceList()
 
     private fun handleTextureView(textureView: TextureView) {
         textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
@@ -227,7 +227,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return current camera, see [MultiCameraClient.ICamera]
      */
-    protected fun getCurrentCamera(): MultiCameraClient.ICamera? {
+    fun getCurrentCamera(): MultiCameraClient.ICamera? {
         return try {
             mCurrentCamera?.get(2, TimeUnit.SECONDS)
         } catch (e: Exception) {
@@ -241,7 +241,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param device see [UsbDevice]
      */
-    protected fun requestPermission(device: UsbDevice?) {
+    fun requestPermission(device: UsbDevice?) {
         mRequestPermission.set(true)
         mCameraClient?.requestPermission(device)
     }
@@ -270,7 +270,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      * @param callBack capture status, see [ICaptureCallBack]
      * @param savePath custom image path
      */
-    protected fun captureImage(callBack: ICaptureCallBack, savePath: String? = null) {
+    fun captureImage(callBack: ICaptureCallBack, savePath: String? = null) {
         getCurrentCamera()?.captureImage(callBack, savePath)
     }
 
@@ -278,14 +278,14 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Get default effect
      */
-    protected fun getDefaultEffect() = getCurrentCamera()?.getDefaultEffect()
+    fun getDefaultEffect() = getCurrentCamera()?.getDefaultEffect()
 
     /**
      * Switch camera
      *
      * @param usbDevice camera usb device
      */
-    protected fun switchCamera(usbDevice: UsbDevice) {
+    fun switchCamera(usbDevice: UsbDevice) {
         getCurrentCamera()?.closeCamera()
         try {
             Thread.sleep(500)
@@ -300,7 +300,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return camera open status
      */
-    protected fun isCameraOpened() = getCurrentCamera()?.isCameraOpened()  ?: false
+    fun isCameraOpened() = getCurrentCamera()?.isCameraOpened()  ?: false
 
     /**
      * Update resolution
@@ -308,7 +308,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      * @param width camera preview width
      * @param height camera preview height
      */
-    protected fun updateResolution(width: Int, height: Int) {
+    fun updateResolution(width: Int, height: Int) {
         getCurrentCamera()?.updateResolution(width, height)
     }
 
@@ -318,14 +318,14 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      * @param aspectRatio preview size aspect ratio,
      *                      null means getting all preview sizes
      */
-    protected fun getAllPreviewSizes(aspectRatio: Double? = null) = getCurrentCamera()?.getAllPreviewSizes(aspectRatio)
+    fun getAllPreviewSizes(aspectRatio: Double? = null) = getCurrentCamera()?.getAllPreviewSizes(aspectRatio)
 
     /**
      * Add render effect
      *
      * @param effect a effect will be added, only enable opengl render worked, see [AbstractEffect]
      */
-    protected fun addRenderEffect(effect: AbstractEffect) {
+    fun addRenderEffect(effect: AbstractEffect) {
         getCurrentCamera()?.addRenderEffect(effect)
     }
 
@@ -334,7 +334,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param effect a effect will be removed, only enable opengl render worked, see [AbstractEffect]
      */
-    protected fun removeRenderEffect(effect: AbstractEffect) {
+    fun removeRenderEffect(effect: AbstractEffect) {
         getCurrentCamera()?.removeRenderEffect(effect)
     }
 
@@ -344,21 +344,21 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      * @param classifyId effect classify id
      * @param effect new effect, null means set none
      */
-    protected fun updateRenderEffect(classifyId: Int, effect: AbstractEffect?) {
+    fun updateRenderEffect(classifyId: Int, effect: AbstractEffect?) {
         getCurrentCamera()?.updateRenderEffect(classifyId, effect)
     }
 
     /**
      * Start capture H264 & AAC only
      */
-    protected fun captureStreamStart() {
+    fun captureStreamStart() {
         getCurrentCamera()?.captureStreamStart()
     }
 
     /**
      * Stop capture H264 & AAC only
      */
-    protected fun captureStreamStop() {
+    fun captureStreamStop() {
         getCurrentCamera()?.captureStreamStop()
     }
 
@@ -367,7 +367,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param callBack encode data call back, see [IEncodeDataCallBack]
      */
-    protected fun setEncodeDataCallBack(callBack: IEncodeDataCallBack) {
+    fun setEncodeDataCallBack(callBack: IEncodeDataCallBack) {
         getCurrentCamera()?.setEncodeDataCallBack(callBack)
     }
 
@@ -376,7 +376,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param callBack preview data call back, see [IPreviewDataCallBack]
      */
-    protected fun addPreviewDataCallBack(callBack: IPreviewDataCallBack) {
+    public fun addPreviewDataCallBack(callBack: IPreviewDataCallBack) {
         getCurrentCamera()?.addPreviewDataCallBack(callBack)
     }
 
@@ -396,14 +396,14 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      * @param path custom save path
      * @param durationInSec divided record duration time in seconds
      */
-    protected fun captureVideoStart(callBack: ICaptureCallBack, path: String ?= null, durationInSec: Long = 0L) {
+    fun captureVideoStart(callBack: ICaptureCallBack, path: String ?= null, durationInSec: Long = 0L) {
         getCurrentCamera()?.captureVideoStart(callBack, path, durationInSec)
     }
 
     /**
      * Capture video stop
      */
-    protected fun captureVideoStop() {
+    fun captureVideoStop() {
         getCurrentCamera()?.captureVideoStop()
     }
 
@@ -413,14 +413,14 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      * @param callBack capture status, see [ICaptureCallBack]
      * @param path custom save path
      */
-    protected fun captureAudioStart(callBack: ICaptureCallBack, path: String ?= null) {
+    fun captureAudioStart(callBack: ICaptureCallBack, path: String ?= null) {
         getCurrentCamera()?.captureAudioStart(callBack, path)
     }
 
     /**
      * Capture audio stop
      */
-    protected fun captureAudioStop() {
+    fun captureAudioStop() {
         getCurrentCamera()?.captureAudioStop()
     }
 
@@ -429,14 +429,14 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param callBack play mic in real-time, see [IPlayCallBack]
      */
-    protected fun startPlayMic(callBack: IPlayCallBack? = null) {
+    fun startPlayMic(callBack: IPlayCallBack? = null) {
         getCurrentCamera()?.startPlayMic(callBack)
     }
 
     /**
      * Stop play mic
      */
-    protected fun stopPlayMic() {
+    fun stopPlayMic() {
         getCurrentCamera()?.stopPlayMic()
     }
 
@@ -445,7 +445,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return camera preview size, see [PreviewSize]
      */
-    protected fun getCurrentPreviewSize(): PreviewSize? {
+    fun getCurrentPreviewSize(): PreviewSize? {
         return getCurrentCamera()?.getCameraRequest()?.let {
             PreviewSize(it.previewWidth, it.previewHeight)
         }
@@ -457,7 +457,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      * @param type rotate angle, null means rotating nothing
      * see [RotateType.ANGLE_90], [RotateType.ANGLE_270],...etc.
      */
-    protected fun setRotateType(type: RotateType) {
+    fun setRotateType(type: RotateType) {
         getCurrentCamera()?.setRotateType(type)
     }
 
@@ -469,7 +469,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      * @param command hex value
      * @return control result
      */
-    protected fun sendCameraCommand(command: Int) {
+    fun sendCameraCommand(command: Int) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -483,7 +483,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param focus
      */
-    protected fun setAutoFocus(focus: Boolean) {
+    fun setAutoFocus(focus: Boolean) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -497,7 +497,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return is camera auto focus opened
      */
-    protected fun getAutoFocus(): Boolean? {
+    fun getAutoFocus(): Boolean? {
         return getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return@let false
@@ -509,7 +509,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Reset auto focus
      */
-    protected fun resetAutoFocus() {
+    fun resetAutoFocus() {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -525,7 +525,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param brightness camera brightness
      */
-    protected fun setBrightness(brightness: Int) {
+    fun setBrightness(brightness: Int) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -539,7 +539,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return current brightness value
      */
-    protected fun getBrightness(): Int? {
+    fun getBrightness(): Int? {
         return getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return@let null
@@ -551,7 +551,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Reset brightness
      */
-    protected fun resetBrightness() {
+    fun resetBrightness() {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -565,7 +565,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param contrast camera contrast
      */
-    protected fun setContrast(contrast: Int) {
+    fun setContrast(contrast: Int) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -579,7 +579,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return current contrast value
      */
-    protected fun getContrast(): Int? {
+    fun getContrast(): Int? {
         return getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return@let null
@@ -591,7 +591,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Reset contrast
      */
-    protected fun resetContrast() {
+    fun resetContrast() {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -605,7 +605,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param gain camera gain
      */
-    protected fun setGain(gain: Int) {
+    fun setGain(gain: Int) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -619,7 +619,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return current gain value
      */
-    protected fun getGain(): Int? {
+    fun getGain(): Int? {
         return getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return@let null
@@ -631,7 +631,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Reset gain
      */
-    protected fun resetGain() {
+    fun resetGain() {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -645,7 +645,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param gamma camera gamma
      */
-    protected fun setGamma(gamma: Int) {
+    fun setGamma(gamma: Int) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -659,7 +659,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return current gamma value
      */
-    protected fun getGamma(): Int? {
+    fun getGamma(): Int? {
         return getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return@let null
@@ -671,7 +671,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Reset gamma
      */
-    protected fun resetGamma() {
+    fun resetGamma() {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -685,7 +685,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param hue camera hue
      */
-    protected fun setHue(hue: Int) {
+    fun setHue(hue: Int) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -699,7 +699,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return current hue value
      */
-    protected fun getHue(): Int? {
+    fun getHue(): Int? {
         return getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return@let null
@@ -711,7 +711,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Reset hue
      */
-    protected fun resetHue() {
+    fun resetHue() {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -725,7 +725,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param zoom camera zoom
      */
-    protected fun setZoom(zoom: Int) {
+    fun setZoom(zoom: Int) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -739,7 +739,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return current hue value
      */
-    protected fun getZoom(): Int? {
+    fun getZoom(): Int? {
         return getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return@let null
@@ -751,7 +751,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Reset hue
      */
-    protected fun resetZoom() {
+    fun resetZoom() {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -765,7 +765,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param sharpness camera sharpness
      */
-    protected fun setSharpness(sharpness: Int) {
+    fun setSharpness(sharpness: Int) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -779,7 +779,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return current sharpness value
      */
-    protected fun getSharpness(): Int? {
+    fun getSharpness(): Int? {
         return getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return@let null
@@ -791,7 +791,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Reset sharpness
      */
-    protected fun resetSharpness() {
+    fun resetSharpness() {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -805,7 +805,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @param saturation camera saturation
      */
-    protected fun setSaturation(saturation: Int) {
+    fun setSaturation(saturation: Int) {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -819,7 +819,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
      *
      * @return current saturation value
      */
-    protected fun getSaturation(): Int? {
+    fun getSaturation(): Int? {
         return getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return@let null
@@ -831,7 +831,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
     /**
      * Reset saturation
      */
-    protected fun resetSaturation() {
+    fun resetSaturation() {
         getCurrentCamera()?.let { camera ->
             if (camera !is CameraUVC) {
                 return
@@ -840,7 +840,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
         }
     }
 
-    protected fun openCamera(st: IAspectRatio? = null) {
+    fun openCamera(st: IAspectRatio? = null) {
         when (st) {
             is TextureView, is SurfaceView -> {
                 st
@@ -854,7 +854,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
         }
     }
 
-    protected fun closeCamera() {
+    fun closeCamera() {
         getCurrentCamera()?.closeCamera()
     }
 
@@ -931,7 +931,7 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
             .setAudioSource(CameraRequest.AudioSource.SOURCE_SYS_MIC)
             .setAspectRatioShow(true)
             .setCaptureRawImage(false)
-            .setRawPreviewData(false)
+            .setRawPreviewData(true)
             .create();
     }
 

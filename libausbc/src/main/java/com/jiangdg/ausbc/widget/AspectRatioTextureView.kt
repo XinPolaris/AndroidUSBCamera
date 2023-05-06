@@ -49,9 +49,17 @@ class AspectRatioTextureView: TextureView, IAspectRatio {
 
     }
 
-    override fun getSurfaceWidth(): Int  = width
+    override fun getSurfaceWidth(): Int {
+        Logger.i(TAG, "get width: $width")
+        if (mAspectRatio > 0) {
+            return (mAspectRatio * height).toInt()
+        }
+        return width
+    }
 
-    override fun getSurfaceHeight(): Int  = height
+    override fun getSurfaceHeight(): Int  {
+        return height
+    }
 
     override fun getSurface(): Surface? {
         return try {
@@ -101,6 +109,7 @@ class AspectRatioTextureView: TextureView, IAspectRatio {
             // 注意加回padding大小
             initialWidth += horizontalPadding
             initialHeight += verticalPadding
+            Logger.i(TAG, "onMeasure: $initialWidth/$initialHeight")
             wMeasureSpec = MeasureSpec.makeMeasureSpec(initialWidth, MeasureSpec.EXACTLY)
             hMeasureSpec = MeasureSpec.makeMeasureSpec(initialHeight, MeasureSpec.EXACTLY)
         }
